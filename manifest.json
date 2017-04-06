@@ -1,0 +1,19 @@
+{
+  "manifest_version": 2,
+
+  "name": "YouTube live chat text2speech",
+  "description": "This extension reads every message on YouTube live chat.",
+  "version": "0.1",
+  "author": "lopezloo",
+  "homepage_url": "https://github.com/lopezloo/yt-live-text2speech",
+
+  "browser_action": {},
+  "permissions": [],
+  "content_scripts": [
+    {
+      "matches": ["https://www.youtube.com/live_chat?*"],
+      "js": ["jquery-3.2.0.min.js", "script.js"],
+      "all_frames": true
+    }
+  ]
+}
