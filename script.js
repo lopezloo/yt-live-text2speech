@@ -105,7 +105,7 @@ $(document).ready(function() {
 		});
 	}
 
-	$(document).keydown(function(e) {
+	$(parent.document).keydown(function(e) {
 		let focused = $('yt-live-chat-text-input-field-renderer').attr('focused') == '';
 		if(e.which == 32 && !focused) { // spacebar
 			watcher.updateSpeech();
