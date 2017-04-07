@@ -1,7 +1,7 @@
 /*
 TODO:
 don't speech if message is empty or contains only non-speechable stuff (emojis etc.)
-messages which are removed during play should stop playing
+options
 */
 
 class ChatWatcher {
@@ -13,16 +13,23 @@ class ChatWatcher {
 	onSpeechEnd() {
 		delete watcher.queue[watcher.currentMsg];
 		watcher.currentMsg = null;
-		watcher.update();
+		// if this.auto
+		//watcher.updateSpeech();
 	}
 
-	update() {
-		if(this.currentMsg == null && Object.keys(this.queue).length > 0) {
+	updateSpeech() {
+		if(this.currentMsg !== null) {
+			// Skip current
+			this.removeMsg(this.currentMsg);
+		}
+
+		if(Object.keys(this.queue).length > 0) {
 			let id = Object.keys(this.queue)[0];
 			this.currentMsg = id;
 			let msg = this.queue[id];
 			console.log(msg[0] + ': ' + msg[1] + ' (' + Object.keys(this.queue).length + ' in queue)');
 
+			speechSynthesis.cancel();
 			let u = new SpeechSynthesisUtterance(msg);
 			u.onend = this.onSpeechEnd;
 			speechSynthesis.speak(u);
@@ -32,7 +39,8 @@ class ChatWatcher {
 	addToQueue(id, author, msg) {
 		//console.log('addToQueue ' + id);
 		this.queue[id] = [author, msg];
-		this.update();
+		// if this.auto
+		//this.updateSpeech();
 	}
 
 	updateMsgID(id, newId) {
@@ -45,10 +53,12 @@ class ChatWatcher {
 	}
 
 	removeMsg(id) {
-		if(id !== this.currentMsg) {
-			//console.log('Removing ' + id);
-			delete this.queue[id];
+		if(id == this.currentMsg) {
+			// Stop current message
+			speechSynthesis.cancel();
+			this.currentMsg = null;
 		}
+		delete this.queue[id];
 	}
 }
 var watcher = new ChatWatcher();
@@ -56,7 +66,7 @@ var watcher = new ChatWatcher();
 $(document).ready(function() {
 	console.log('yt-live-text2speech ready!');
 
-	let targetNodes = $(".yt-live-chat-item-list-renderer");
+	let targetNodes = $('.yt-live-chat-item-list-renderer');
 	let MutationObserver = window.MutationObserver || window.WebKitMutationObserver;
 	let myObserver = new MutationObserver(mutationHandler);
 	let obsConfig = {
@@ -81,7 +91,6 @@ $(document).ready(function() {
 			}
 			else if(mutation.attributeName == 'is-deleted') {
 				// Message was removed
-				let id = mutation.target.id;
 				watcher.removeMsg(mutation.target.id);
 			} else if (mutation.addedNodes !== null) {
 				$(mutation.addedNodes).each(function() {
@@ -95,4 +104,12 @@ $(document).ready(function() {
 			}
 		});
 	}
+
+	$(document).keydown(function(e) {
+		let focused = $('yt-live-chat-text-input-field-renderer').attr('focused') == '';
+		if(e.which == 32 && !focused) { // spacebar
+			watcher.updateSpeech();
+			e.preventDefault();
+		}
+	});
 });
