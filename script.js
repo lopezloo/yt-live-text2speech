@@ -27,10 +27,11 @@ class ChatWatcher {
 			let id = Object.keys(this.queue)[0];
 			this.currentMsg = id;
 			let msg = this.queue[id];
-			console.log(msg[0] + ': ' + msg[1] + ' (' + Object.keys(this.queue).length + ' in queue)');
+			let msgt = msg[0] + ': ' + msg[1];
+			console.log(msgt + ' (' + Object.keys(this.queue).length + ' in queue)');
 
 			speechSynthesis.cancel();
-			let u = new SpeechSynthesisUtterance(msg);
+			let u = new SpeechSynthesisUtterance(msgt);
 			u.onend = this.onSpeechEnd;
 			speechSynthesis.speak(u);
 		}
@@ -44,21 +45,27 @@ class ChatWatcher {
 	}
 
 	updateMsgID(id, newId) {
-		//console.log('updateMsgID: ' + id + ' => ' + newId);
-		this.queue[newId] = this.queue[id];
-		if(this.currentMsg == id) {
-			this.currentMsg = newId;
+		// Sometimes message with given ID can be already removed.
+		if(id in this.queue) {
+			//console.log('updateMsgID: ' + id + ' => ' + newId);
+			this.queue[newId] = this.queue[id];
+			if(this.currentMsg == id) {
+				this.currentMsg = newId;
+			}
+			delete this.queue[id];
 		}
-		delete this.queue[id];
 	}
 
 	removeMsg(id) {
-		if(id == this.currentMsg) {
-			// Stop current message
-			speechSynthesis.cancel();
-			this.currentMsg = null;
+		if(id in this.queue) {
+			//console.log('removeMsg: ' + id);
+			if(id == this.currentMsg) {
+				// Stop current message
+				speechSynthesis.cancel();
+				this.currentMsg = null;
+			}
+			delete this.queue[id];
 		}
-		delete this.queue[id];
 	}
 }
 var watcher = new ChatWatcher();
@@ -105,11 +112,24 @@ $(document).ready(function() {
 		});
 	}
 
-	$(parent.document).keydown(function(e) {
-		let focused = $('yt-live-chat-text-input-field-renderer').attr('focused') == '';
-		if(e.which == 32 && !focused) { // spacebar
-			watcher.updateSpeech();
-			e.preventDefault();
+	var keypressed = false;
+	function onKeydown(e) {
+		if(!keypressed) {
+			keypressed = true;
+			let focused = $('yt-live-chat-text-input-field-renderer').attr('focused') == '';
+			if(e.which == 32 && !focused) { // spacebar
+				watcher.updateSpeech();
+				e.preventDefault();
+			}
 		}
-	});
+	}
+	function onKeyup(e) {
+		if(keypressed && e.which == 32) {
+			keypressed = false;
+		}
+	}
+	$(document).keydown(onKeydown);
+	$(parent.document).keydown(onKeydown);
+	$(document).keyup(onKeyup);
+	$(parent.document).keyup(onKeyup);
 });
