@@ -1,7 +1,6 @@
 /*
 TODO:
-don't speech if message is empty or contains only non-speechable stuff (emojis etc.)
-options
+options: language, auto mode, emojis
 */
 
 class ChatWatcher {
@@ -104,12 +103,26 @@ $(document).ready(function() {
 					if ($(this).is('yt-live-chat-text-message-renderer')) {
 						let id = $(this)[0].id;
 						let author = $(this).find('#author-name').text();
-						let msg = $(this).find('#message').text();
+						let msg = getTextWithAlts($(this).find('#message'));
 						watcher.addToQueue(id, author, msg);
 					}
 				});
 			}
 		});
+	}
+
+	function getTextWithAlts(e) {
+		let txt = '';
+		e.contents().each(function() {
+			if($(this).get(0).nodeType == 1 && $(this).is('img')) {
+				// img (emoji)
+				txt += $(this).attr('alt');
+			} else {
+				// text or span (mentions)
+				txt += $(this).text();
+			}
+		});
+		return txt;
 	}
 
 	var keypressed = false;
