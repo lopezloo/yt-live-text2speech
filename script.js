@@ -6,6 +6,8 @@ auto mode
 var options = {
 	voiceType: '',
 	emojisEnabled: true,
+	voiceRate: 1.0,
+	voicePitch: 1.0,
 	// automode
 }
 
@@ -13,11 +15,15 @@ function loadOptions() {
 	chrome.storage.sync.get({
 		// default values
 		voiceType: '',
-		emojisEnabled: true
+		emojisEnabled: true,
+		voiceRate: 1.0,
+		voicePitch: 1.0
 	}, function(items) {
 		options.voiceType = items.voiceType;
 		options.emojisEnabled = items.emojisEnabled;
-		console.log('loadOptions: voice: ' + items.voiceType + ' emojis: ' + items.emojisEnabled);
+		options.voiceRate = items.voiceRate;
+		options.voicePitch = items.voicePitch;
+		console.log('loadOptions: voice: ' + items.voiceType + ' emojis: ' + items.emojisEnabled + ' rate: ' + items.voiceRate + ' pitch: ' + items.voicePitch);
 	});
 }
 loadOptions();
@@ -29,7 +35,13 @@ chrome.storage.onChanged.addListener(function(changes, areaName) {
 	if(changes.emojisEnabled) {
 		options.emojisEnabled = changes.emojisEnabled.newValue;
 	}
-	console.log('Options changed. Voice: ' + options.voiceType + ' Emojis: ' + options.emojisEnabled);
+	if(changes.voiceRate) {
+		options.voiceRate = changes.voiceRate.newValue;
+	}
+	if(changes.voicePitch) {
+		options.voicePitch = changes.voicePitch.newValue;
+	}
+	console.log('Options changed. Voice: ' + options.voiceType + ' Emojis: ' + options.emojisEnabled + ' rate: ' + options.voiceRate + ' pitch: ' + options.voicePitch);
 })
 
 class ChatWatcher {
@@ -62,6 +74,8 @@ class ChatWatcher {
 			let u = new SpeechSynthesisUtterance(msgt);
 			u.onend = this.onSpeechEnd;
 			u.lang = options.voiceType;
+			u.rate = options.voiceRate;
+			u.pitch = options.voicePitch;
 			speechSynthesis.speak(u);
 		}
 	}
