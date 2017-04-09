@@ -127,10 +127,10 @@ $(document).ready(function() {
 
 	var keypressed = false;
 	function onKeydown(e) {
-		if(!keypressed) {
+		if(!keypressed && e.which == 32) { // spacebar
 			keypressed = true;
 			let focused = $('yt-live-chat-text-input-field-renderer').attr('focused') == '';
-			if(e.which == 32 && !focused) { // spacebar
+			if(!focused) {
 				watcher.updateSpeech();
 				e.preventDefault();
 			}
