@@ -22,6 +22,16 @@ function loadOptions() {
 }
 loadOptions();
 
+chrome.storage.onChanged.addListener(function(changes, areaName) {
+	if(changes.voiceType) {
+		options.voiceType = changes.voiceType.newValue;
+	}
+	if(changes.emojisEnabled) {
+		options.emojisEnabled = changes.emojisEnabled.newValue;
+	}
+	console.log('Options changed. Voice: ' + options.voiceType + ' Emojis: ' + options.emojisEnabled);
+})
+
 class ChatWatcher {
 	constructor() {
 		this.queue = {};

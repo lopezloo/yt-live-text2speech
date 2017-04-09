@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', function() {
 			voiceType: voice,
 			emojisEnabled: emojis
 		}, function() {
-			statusText.textContent = 'Options saved. Please refresh tab with chat.';
+			statusText.textContent = 'Options saved.';
 			console.log('saveChanges: voice: ' + voice + ' emojis: ' + emojis);
 		});
 	}
