@@ -1,7 +1,26 @@
 /*
 TODO:
-options: language, auto mode, emojis
+auto mode
 */
+
+var options = {
+	voiceType: '',
+	emojisEnabled: true,
+	// automode
+}
+
+function loadOptions() {
+	chrome.storage.sync.get({
+		// default values
+		voiceType: '',
+		emojisEnabled: true
+	}, function(items) {
+		options.voiceType = items.voiceType;
+		options.emojisEnabled = items.emojisEnabled;
+		console.log('loadOptions: voice: ' + items.voiceType + ' emojis: ' + items.emojisEnabled);
+	});
+}
+loadOptions();
 
 class ChatWatcher {
 	constructor() {
@@ -32,6 +51,7 @@ class ChatWatcher {
 			speechSynthesis.cancel();
 			let u = new SpeechSynthesisUtterance(msgt);
 			u.onend = this.onSpeechEnd;
+			u.lang = options.voiceType;
 			speechSynthesis.speak(u);
 		}
 	}
@@ -103,7 +123,13 @@ $(document).ready(function() {
 					if ($(this).is('yt-live-chat-text-message-renderer')) {
 						let id = $(this)[0].id;
 						let author = $(this).find('#author-name').text();
-						let msg = getTextWithAlts($(this).find('#message'));
+
+						let msg;
+						if(options.emojisEnabled) {
+							msg = getTextWithAlts($(this).find('#message'));
+						} else {
+							msg = $(this).find('#message').text();
+						}
 						watcher.addToQueue(id, author, msg);
 					}
 				});
