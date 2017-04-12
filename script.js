@@ -211,8 +211,11 @@ $(document).ready(function() {
 	function onKeydown(e) {
 		if(!keypressed && e.which == 32) { // spacebar
 			keypressed = true;
-			let focused = $('yt-live-chat-text-input-field-renderer').attr('focused') == '';
-			if(!focused) {
+			$activeElement = $(parent.document.activeElement);
+			if($('yt-live-chat-text-input-field-renderer').attr('focused') !== '' &&
+				!$activeElement.is('input') &&
+				!$activeElement.is('textarea')
+			) {
 				watcher.switchPause();
 				e.preventDefault();
 			}
