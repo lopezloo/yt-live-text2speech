@@ -52,6 +52,8 @@ document.addEventListener('DOMContentLoaded', function() {
 			option.value = voices[i].lang;
 			option.setAttribute('data-name', voices[i].name);
 			voiceSelect.appendChild(option);
+
+			console.log('Voice: ' + voices[i].lang + ' | local: ' + voices[i].localService);
 		}
 		console.log('Options: loaded ' + voices.length + ' voices.');
 	};

@@ -5,6 +5,7 @@ auto mode
 
 var options = {
 	voiceType: '',
+	voice: null,
 	emojisEnabled: true,
 	voiceRate: 1.0,
 	voicePitch: 1.0,
@@ -42,6 +43,7 @@ chrome.storage.onChanged.addListener(function(changes, areaName) {
 		options.voicePitch = changes.voicePitch.newValue;
 	}
 	console.log('Options changed. Voice: ' + options.voiceType + ' Emojis: ' + options.emojisEnabled + ' rate: ' + options.voiceRate + ' pitch: ' + options.voicePitch);
+	updateVoice();
 })
 
 class ChatWatcher {
@@ -63,6 +65,11 @@ class ChatWatcher {
 			this.removeMsg(this.currentMsg);
 		}
 
+		if(voices.length == 0) {
+			console.log('ERROR: No voices loaded.')
+			return;
+		}
+
 		if(Object.keys(this.queue).length > 0) {
 			let id = Object.keys(this.queue)[0];
 			this.currentMsg = id;
@@ -73,7 +80,7 @@ class ChatWatcher {
 			speechSynthesis.cancel();
 			let u = new SpeechSynthesisUtterance(msgt);
 			u.onend = this.onSpeechEnd;
-			u.lang = options.voiceType;
+			u.voice = options.voice;
 			u.rate = options.voiceRate;
 			u.pitch = options.voicePitch;
 			speechSynthesis.speak(u);
@@ -112,6 +119,23 @@ class ChatWatcher {
 	}
 }
 var watcher = new ChatWatcher();
+
+var voices = [];
+window.speechSynthesis.onvoiceschanged = function() {
+	voices = speechSynthesis.getVoices();
+	console.log('Loaded ' + voices.length + ' voices.');
+	updateVoice();
+};
+
+function updateVoice() {
+	for(i = 0; i < voices.length; i++) {
+		if(voices[i].lang == options.voiceType) {
+			options.voice = voices[i];
+			console.log('Using voice: ' + voices[i].name + ' (' + voices[i].lang + ')' + ' (localService: ' + voices[i].localService + ')')
+			break;
+		}
+	}
+}
 
 $(document).ready(function() {
 	console.log('yt-live-text2speech ready!');
