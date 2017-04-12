@@ -1,15 +1,9 @@
-/*
-TODO:
-auto mode
-*/
-
 var options = {
 	voiceType: '',
 	voice: null,
 	emojisEnabled: true,
 	voiceRate: 1.0,
 	voicePitch: 1.0,
-	// automode
 }
 
 function loadOptions() {
@@ -28,6 +22,23 @@ function loadOptions() {
 	});
 }
 loadOptions();
+
+var voices = [];
+window.speechSynthesis.onvoiceschanged = function() {
+	voices = speechSynthesis.getVoices();
+	console.log('Loaded ' + voices.length + ' voices.');
+	updateVoice();
+};
+
+function updateVoice() {
+	for(i = 0; i < voices.length; i++) {
+		if(voices[i].lang == options.voiceType) {
+			options.voice = voices[i];
+			console.log('Using voice: ' + voices[i].name + ' (' + voices[i].lang + ')' + ' (localService: ' + voices[i].localService + ')')
+			break;
+		}
+	}
+}
 
 chrome.storage.onChanged.addListener(function(changes, areaName) {
 	if(changes.voiceType) {
@@ -50,48 +61,62 @@ class ChatWatcher {
 	constructor() {
 		this.queue = {};
 		this.currentMsg = null;
+		this.paused = false;
 	}
 
 	onSpeechEnd() {
-		delete watcher.queue[watcher.currentMsg];
-		watcher.currentMsg = null;
-		// if this.auto
-		//watcher.updateSpeech();
+		delete this.queue[this.currentMsg];
+		this.currentMsg = null;
+		this.updateSpeech();
+	}
+
+	switchPause() {
+		this.paused = !this.paused;
+		this.updateSpeech();
 	}
 
 	updateSpeech() {
-		if(this.currentMsg !== null) {
-			// Skip current
-			this.removeMsg(this.currentMsg);
-		}
+		if(!this.paused && this.currentMsg === null) {
+			if(voices.length == 0) {
+				console.log('ERROR: No voices loaded.')
+				return;
+			}
 
-		if(voices.length == 0) {
-			console.log('ERROR: No voices loaded.')
-			return;
-		}
+			if(Object.keys(this.queue).length > 0) {
+				let id = Object.keys(this.queue)[0];
+				this.currentMsg = id;
+				let msg = this.queue[id];
+				let msgt = msg[0] + ': ' + msg[1];
+				console.log(msgt + ' (' + Object.keys(this.queue).length + ' in queue)');
 
-		if(Object.keys(this.queue).length > 0) {
-			let id = Object.keys(this.queue)[0];
-			this.currentMsg = id;
-			let msg = this.queue[id];
-			let msgt = msg[0] + ': ' + msg[1];
-			console.log(msgt + ' (' + Object.keys(this.queue).length + ' in queue)');
+				let u = new SpeechSynthesisUtterance(msgt);
 
-			speechSynthesis.cancel();
-			let u = new SpeechSynthesisUtterance(msgt);
-			u.onend = this.onSpeechEnd;
-			u.voice = options.voice;
-			u.rate = options.voiceRate;
-			u.pitch = options.voicePitch;
-			speechSynthesis.speak(u);
+				// Don't trust it. It's buggy.
+				//u.onend = this.onSpeechEnd;
+
+				u.voice = options.voice;
+				u.rate = options.voiceRate;
+				u.pitch = options.voicePitch;
+				speechSynthesis.speak(u);
+
+				// Thanks to: https://gist.github.com/mapio/967b6a65b50d39c2ae4f
+				let _this = this;
+				function _wait() {
+					if(!speechSynthesis.speaking) {
+						_this.onSpeechEnd();
+						return;
+					}
+					window.setTimeout(_wait, 200);
+				}
+				_wait();
+			}
 		}
 	}
 
 	addToQueue(id, author, msg) {
 		//console.log('addToQueue ' + id);
 		this.queue[id] = [author, msg];
-		// if this.auto
-		//this.updateSpeech();
+		this.updateSpeech();
 	}
 
 	updateMsgID(id, newId) {
@@ -119,23 +144,6 @@ class ChatWatcher {
 	}
 }
 var watcher = new ChatWatcher();
-
-var voices = [];
-window.speechSynthesis.onvoiceschanged = function() {
-	voices = speechSynthesis.getVoices();
-	console.log('Loaded ' + voices.length + ' voices.');
-	updateVoice();
-};
-
-function updateVoice() {
-	for(i = 0; i < voices.length; i++) {
-		if(voices[i].lang == options.voiceType) {
-			options.voice = voices[i];
-			console.log('Using voice: ' + voices[i].name + ' (' + voices[i].lang + ')' + ' (localService: ' + voices[i].localService + ')')
-			break;
-		}
-	}
-}
 
 $(document).ready(function() {
 	console.log('yt-live-text2speech ready!');
@@ -205,7 +213,7 @@ $(document).ready(function() {
 			keypressed = true;
 			let focused = $('yt-live-chat-text-input-field-renderer').attr('focused') == '';
 			if(!focused) {
-				watcher.updateSpeech();
+				watcher.switchPause();
 				e.preventDefault();
 			}
 		}
