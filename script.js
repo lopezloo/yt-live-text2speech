@@ -160,7 +160,8 @@ function initWatching() {
 	}
 	watcher = new ChatWatcher();
 
-	let targetNodes = $('.yt-live-chat-item-list-renderer');
+	// without .iron-selected = detached chat
+	let targetNodes = $('#chat-messages.style-scope.yt-live-chat-renderer.iron-selected');
 	let MutationObserver = window.MutationObserver || window.WebKitMutationObserver;
 	let myObserver = new MutationObserver(mutationHandler);
 	let obsConfig = {
@@ -176,31 +177,33 @@ function initWatching() {
 	});
 
 	function mutationHandler(mutationRecords) {
-		mutationRecords.forEach(function(mutation){
-			if(mutation.attributeName == 'id') {
-				if(mutation.oldValue !== null) {
-					// YT gives temporary ID for own messages, which needs to be updated
-					watcher.updateMsgID(mutation.oldValue, mutation.target.id);
-				}
-			}
-			else if(mutation.attributeName == 'is-deleted') {
-				// Message was removed
-				watcher.removeMsg(mutation.target.id);
-			} else if (mutation.addedNodes !== null) {
-				$(mutation.addedNodes).each(function() {
-					if ($(this).is('yt-live-chat-text-message-renderer')) {
-						let id = $(this)[0].id;
-						let author = $(this).find('#author-name').text();
-
-						let msg;
-						if(options.emojisEnabled) {
-							msg = getTextWithAlts($(this).find('#message'));
-						} else {
-							msg = $(this).find('#message').text();
-						}
-						watcher.addToQueue(id, author, msg);
+		mutationRecords.forEach(function(mutation) {
+			if($('#chat-messages').is('.iron-selected')) {
+				if(mutation.attributeName == 'id') {
+					if(mutation.oldValue !== null) {
+						// YT gives temporary ID for own messages, which needs to be updated
+						watcher.updateMsgID(mutation.oldValue, mutation.target.id);
 					}
-				});
+				}
+				else if(mutation.attributeName == 'is-deleted') {
+					// Message was removed
+					watcher.removeMsg(mutation.target.id);
+				} else if (mutation.addedNodes !== null) {
+					$(mutation.addedNodes).each(function() {
+						if ($(this).is('yt-live-chat-text-message-renderer')) {
+							let id = $(this)[0].id;
+							let author = $(this).find('#author-name').text();
+
+							let msg;
+							if(options.emojisEnabled) {
+								msg = getTextWithAlts($(this).find('#message'));
+							} else {
+								msg = $(this).find('#message').text();
+							}
+							watcher.addToQueue(id, author, msg);
+						}
+					});
+				}
 			}
 		});
 	}
