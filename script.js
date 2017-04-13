@@ -143,10 +143,23 @@ class ChatWatcher {
 		}
 	}
 }
-var watcher = new ChatWatcher();
 
-$(document).ready(function() {
-	console.log('yt-live-text2speech ready!');
+function getTextWithAlts(e) {
+	let txt = '';
+	e.contents().each(function() {
+		if($(this).get(0).nodeType == 1 && $(this).is('img')) {
+			// img (emoji)
+			txt += $(this).attr('alt');
+		} else {
+			// text or span (mentions)
+			txt += $(this).text();
+		}
+	});
+	return txt;
+}
+
+function initWatching() {
+	var watcher = new ChatWatcher();
 
 	let targetNodes = $('.yt-live-chat-item-list-renderer');
 	let MutationObserver = window.MutationObserver || window.WebKitMutationObserver;
@@ -193,20 +206,6 @@ $(document).ready(function() {
 		});
 	}
 
-	function getTextWithAlts(e) {
-		let txt = '';
-		e.contents().each(function() {
-			if($(this).get(0).nodeType == 1 && $(this).is('img')) {
-				// img (emoji)
-				txt += $(this).attr('alt');
-			} else {
-				// text or span (mentions)
-				txt += $(this).text();
-			}
-		});
-		return txt;
-	}
-
 	var keypressed = false;
 	function onKeydown(e) {
 		if(!keypressed && e.which == 32) { // spacebar
@@ -230,4 +229,11 @@ $(document).ready(function() {
 	$(parent.document).keydown(onKeydown);
 	$(document).keyup(onKeyup);
 	$(parent.document).keyup(onKeyup);
+}
+
+$(document).ready(function() {
+	console.log('yt-live-text2speech ready!');
+
+	// Init chat after 1s (simple way to prevent reading old messages)
+	window.setTimeout(initWatching, 1000);
 });
