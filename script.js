@@ -152,8 +152,13 @@ function getTextWithAlts(e) {
 	return txt;
 }
 
+var watcher;
 function initWatching() {
-	var watcher = new ChatWatcher();
+	if(watcher) {
+		console.log('Warning: initWatching() called more than once.')
+		return;
+	}
+	watcher = new ChatWatcher();
 
 	let targetNodes = $('.yt-live-chat-item-list-renderer');
 	let MutationObserver = window.MutationObserver || window.WebKitMutationObserver;
