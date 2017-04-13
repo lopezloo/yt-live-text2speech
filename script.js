@@ -24,12 +24,6 @@ function loadOptions() {
 loadOptions();
 
 var voices = [];
-window.speechSynthesis.onvoiceschanged = function() {
-	voices = speechSynthesis.getVoices();
-	console.log('Loaded ' + voices.length + ' voices.');
-	updateVoice();
-};
-
 function updateVoice() {
 	for(i = 0; i < voices.length; i++) {
 		if(voices[i].lang == options.voiceType) {
@@ -234,6 +228,12 @@ function initWatching() {
 $(document).ready(function() {
 	console.log('yt-live-text2speech ready!');
 
-	// Init chat after 1s (simple way to prevent reading old messages)
-	window.setTimeout(initWatching, 1000);
+	window.speechSynthesis.onvoiceschanged = function() {
+		voices = speechSynthesis.getVoices();
+		console.log('Loaded ' + voices.length + ' voices.');
+		updateVoice();
+
+		// Init chat after 1s (simple way to prevent reading old messages)
+		window.setTimeout(initWatching, 1000);
+	};
 });
