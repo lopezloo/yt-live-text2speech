@@ -4,6 +4,7 @@ var options = {
 	emojisEnabled: true,
 	voiceRate: 1.0,
 	voicePitch: 1.0,
+	voiceVolume: 1.0,
 }
 
 function loadOptions() {
@@ -12,13 +13,15 @@ function loadOptions() {
 		voiceType: '',
 		emojisEnabled: true,
 		voiceRate: 1.0,
-		voicePitch: 1.0
+		voicePitch: 1.0,
+		voiceVolume: 1.0,
 	}, function(items) {
 		options.voiceType = items.voiceType;
 		options.emojisEnabled = items.emojisEnabled;
 		options.voiceRate = items.voiceRate;
 		options.voicePitch = items.voicePitch;
-		console.log('loadOptions: voice: ' + items.voiceType + ' emojis: ' + items.emojisEnabled + ' rate: ' + items.voiceRate + ' pitch: ' + items.voicePitch);
+		options.voiceVolume = items.voiceVolume;
+		console.log('loadOptions: voice: ' + items.voiceType + ' emojis: ' + items.emojisEnabled + ' rate: ' + items.voiceRate + ' pitch: ' + items.voicePitch + ' volume: ' + items.voiceVolume);
 	});
 }
 loadOptions();
@@ -28,7 +31,7 @@ function updateVoice() {
 	for(i = 0; i < voices.length; i++) {
 		if(voices[i].lang == options.voiceType) {
 			options.voice = voices[i];
-			console.log('Using voice: ' + voices[i].name + ' (' + voices[i].lang + ')' + ' (localService: ' + voices[i].localService + ')')
+			console.log('Using voice: ' + voices[i].name + ' (' + voices[i].lang + ')' + ' (local: ' + voices[i].localService + ')')
 			break;
 		}
 	}
@@ -47,7 +50,10 @@ chrome.storage.onChanged.addListener(function(changes, areaName) {
 	if(changes.voicePitch) {
 		options.voicePitch = changes.voicePitch.newValue;
 	}
-	console.log('Options changed. Voice: ' + options.voiceType + ' Emojis: ' + options.emojisEnabled + ' rate: ' + options.voiceRate + ' pitch: ' + options.voicePitch);
+	if(changes.voiceVolume) {
+		options.voiceVolume = changes.voiceVolume.newValue;
+	}
+	console.log('Options changed. Voice: ' + options.voiceType + ' Emojis: ' + options.emojisEnabled + ' rate: ' + options.voiceRate + ' pitch: ' + options.voicePitch + ' volume: ' + options.voiceVolume);
 	updateVoice();
 })
 
@@ -91,6 +97,7 @@ class ChatWatcher {
 				u.voice = options.voice;
 				u.rate = options.voiceRate;
 				u.pitch = options.voicePitch;
+				u.volume = options.voiceVolume;
 				speechSynthesis.speak(u);
 
 				// Thanks to: https://gist.github.com/mapio/967b6a65b50d39c2ae4f
