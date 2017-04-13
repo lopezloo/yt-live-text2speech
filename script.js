@@ -100,7 +100,7 @@ class ChatWatcher {
 						_this.onSpeechEnd();
 						return;
 					}
-					window.setTimeout(_wait, 200);
+					setTimeout(_wait, 200);
 				}
 				_wait();
 			}
@@ -152,12 +152,13 @@ function getTextWithAlts(e) {
 	return txt;
 }
 
-var watcher;
+function isChatDetached() {
+	return !$('#chat-messages').is('.iron-selected');
+}
+
+var watcher = null;
 function initWatching() {
-	if(watcher) {
-		console.log('Warning: initWatching() called more than once.')
-		return;
-	}
+	console.log('yt-live-text2speech: initializing...')
 	watcher = new ChatWatcher();
 
 	// without .iron-selected = detached chat
@@ -178,7 +179,7 @@ function initWatching() {
 
 	function mutationHandler(mutationRecords) {
 		mutationRecords.forEach(function(mutation) {
-			if($('#chat-messages').is('.iron-selected')) {
+			if(!isChatDetached()) {
 				if(mutation.attributeName == 'id') {
 					if(mutation.oldValue !== null) {
 						// YT gives temporary ID for own messages, which needs to be updated
@@ -236,12 +237,17 @@ function initWatching() {
 $(document).ready(function() {
 	console.log('yt-live-text2speech ready!');
 
-	window.speechSynthesis.onvoiceschanged = function() {
-		voices = speechSynthesis.getVoices();
-		console.log('Loaded ' + voices.length + ' voices.');
-		updateVoice();
+	speechSynthesis.onvoiceschanged = function() {
+		// For some reason, this event can fire multiple times.
+		if(voices.length == 0) {
+			voices = speechSynthesis.getVoices();
+			console.log('Loaded ' + voices.length + ' voices.');
+			updateVoice();
 
-		// Init chat after 1s (simple way to prevent reading old messages)
-		window.setTimeout(initWatching, 1000);
+			if(watcher === null) {
+				// Init chat after 1s (simple way to prevent reading old messages)
+				setTimeout(initWatching, 1000);
+			}
+		}
 	};
 });
