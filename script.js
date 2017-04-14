@@ -268,3 +268,9 @@ $(document).ready(function() {
 		}
 	};
 });
+
+window.onbeforeunload = function() {
+	// This super strange, but browser won't stop speaking after closing tab.
+	// So shut up, pls.
+	speechSynthesis.cancel();
+};
