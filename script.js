@@ -38,20 +38,10 @@ function updateVoice() {
 }
 
 chrome.storage.onChanged.addListener(function(changes, areaName) {
-	if(changes.voiceType) {
-		options.voiceType = changes.voiceType.newValue;
-	}
-	if(changes.emojisEnabled) {
-		options.emojisEnabled = changes.emojisEnabled.newValue;
-	}
-	if(changes.voiceRate) {
-		options.voiceRate = changes.voiceRate.newValue;
-	}
-	if(changes.voicePitch) {
-		options.voicePitch = changes.voicePitch.newValue;
-	}
-	if(changes.voiceVolume) {
-		options.voiceVolume = changes.voiceVolume.newValue;
+	for(let k in changes) {
+		if(k in options) {
+			options[k] = changes[k].newValue;
+		}
 	}
 	console.log('Options changed. Voice: ' + options.voiceType + ' Emojis: ' + options.emojisEnabled + ' rate: ' + options.voiceRate + ' pitch: ' + options.voicePitch + ' volume: ' + options.voiceVolume);
 	updateVoice();
@@ -62,6 +52,9 @@ class ChatWatcher {
 		this.queue = {};
 		this.currentMsg = null;
 		this.paused = false;
+
+		// Chat can be detached to popup (however YT still updates messages)
+		this.detached = false;
 	}
 
 	onSpeechEnd() {
@@ -76,7 +69,7 @@ class ChatWatcher {
 	}
 
 	updateSpeech() {
-		if(!this.paused && this.currentMsg === null) {
+		if(!this.paused && this.currentMsg === null && !this.detached) {
 			if(voices.length == 0) {
 				console.log('ERROR: No voices loaded.')
 				return;
@@ -116,8 +109,10 @@ class ChatWatcher {
 
 	addToQueue(id, author, msg) {
 		//console.log('addToQueue ' + id);
-		this.queue[id] = [author, msg];
-		this.updateSpeech();
+		if(!(id in this.queue) && !this.detached) {
+			this.queue[id] = [author, msg];
+			this.updateSpeech();
+		}
 	}
 
 	updateMsgID(id, newId) {
@@ -143,6 +138,19 @@ class ChatWatcher {
 			delete this.queue[id];
 		}
 	}
+
+	onDetachedStateChanged(detached) {
+		this.detached = detached;
+		console.log('Chat detached: ' + this.detached);
+		if(this.detached) {
+			// Chat got detached to external window. We assume user want
+			// listen messages in that window, so clear current messages now.
+			// If he ever goes back, only new messages should play in that case.
+			for(let id in this.queue) {
+				this.removeMsg(id);
+			}
+		}
+	}
 }
 
 function getTextWithAlts(e) {
@@ -157,10 +165,6 @@ function getTextWithAlts(e) {
 		}
 	});
 	return txt;
-}
-
-function isChatDetached() {
-	return !$('#chat-messages').is('.iron-selected');
 }
 
 var watcher = null;
@@ -186,32 +190,38 @@ function initWatching() {
 
 	function mutationHandler(mutationRecords) {
 		mutationRecords.forEach(function(mutation) {
-			if(!isChatDetached()) {
-				if(mutation.attributeName == 'id') {
-					if(mutation.oldValue !== null) {
-						// YT gives temporary ID for own messages, which needs to be updated
-						watcher.updateMsgID(mutation.oldValue, mutation.target.id);
-					}
-				}
-				else if(mutation.attributeName == 'is-deleted') {
-					// Message was removed
-					watcher.removeMsg(mutation.target.id);
-				} else if (mutation.addedNodes !== null) {
-					$(mutation.addedNodes).each(function() {
-						if ($(this).is('yt-live-chat-text-message-renderer')) {
-							let id = $(this)[0].id;
-							let author = $(this).find('#author-name').text();
+			//console.log(mutation);
 
-							let msg;
-							if(options.emojisEnabled) {
-								msg = getTextWithAlts($(this).find('#message'));
-							} else {
-								msg = $(this).find('#message').text();
-							}
-							watcher.addToQueue(id, author, msg);
-						}
-					});
+			if(mutation.attributeName === 'is-deleted') {
+				// Message was deleted
+				watcher.removeMsg(mutation.target.id);
+			} 
+			else if(mutation.attributeName === 'id') {
+				if(mutation.oldValue !== null) {
+					// YT gives temporary ID for own messages, which needs to be updated
+					watcher.updateMsgID(mutation.oldValue, mutation.target.id);
 				}
+			}
+			else if(mutation.attributeName === 'class' && $(mutation.target).is('#chat-messages')) {
+				// Chat got detached/attached
+				let detached = !$(mutation.target).is('.iron-selected');
+				watcher.onDetachedStateChanged(detached);
+			}
+			else if (mutation.addedNodes !== null) {
+				$(mutation.addedNodes).each(function() {
+					if ($(this).is('yt-live-chat-text-message-renderer')) {
+						let id = $(this)[0].id;
+						let author = $(this).find('#author-name').text();
+
+						let msg;
+						if(options.emojisEnabled) {
+							msg = getTextWithAlts($(this).find('#message'));
+						} else {
+							msg = $(this).find('#message').text();
+						}
+						watcher.addToQueue(id, author, msg);
+					}
+				});
 			}
 		});
 	}
@@ -252,8 +262,8 @@ $(document).ready(function() {
 			updateVoice();
 
 			if(watcher === null) {
-				// Init chat after 1s (simple way to prevent reading old messages)
-				setTimeout(initWatching, 1000);
+				// Init chat after 2s (simple way to prevent reading old messages)
+				setTimeout(initWatching, 2000);
 			}
 		}
 	};
