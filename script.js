@@ -93,10 +93,21 @@ class ChatWatcher {
 				u.volume = options.voiceVolume;
 				speechSynthesis.speak(u);
 
+				let startTime = +new Date();
 				// Thanks to: https://gist.github.com/mapio/967b6a65b50d39c2ae4f
 				let _this = this;
 				function _wait() {
 					if(!speechSynthesis.speaking) {
+						_this.onSpeechEnd();
+						return;
+					}
+
+					// Long messages can sometimes stop playing and .speaking still returns true
+					// Long means vocally long (for example 200*emoji)
+					// Thanks to this protection at least the whole reader doesn't break up.
+					if((+new Date()) - startTime > 30*1000) {
+						console.log('WARNING: Current message was playing longer than 30 seconds and was stopped.');
+						speechSynthesis.cancel();
 						_this.onSpeechEnd();
 						return;
 					}
@@ -270,7 +281,7 @@ $(document).ready(function() {
 });
 
 window.onbeforeunload = function() {
-	// This super strange, but browser won't stop speaking after closing tab.
+	// Browser won't stop speaking after closing tab.
 	// So shut up, pls.
 	speechSynthesis.cancel();
 };
