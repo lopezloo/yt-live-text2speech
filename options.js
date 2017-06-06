@@ -39,7 +39,14 @@ document.addEventListener('DOMContentLoaded', function() {
 			delay: 0.0
 		}, function(items) {
 			console.log('Options loaded! Voice: ' + items.voiceType + '; emojis: ' + items.emojisEnabled + '; rate: ' + items.voiceRate + '; pitch: ' + items.voicePitch + '; volume: ' + items.voiceVolume);
-			voiceSelect.value = items.voiceType;
+			
+			voiceSelect.value = voiceSelect.options[0];
+			for(let i=0; i < voiceSelect.options.length; i++) {
+				if(voiceSelect.options[i].value == items.voiceType || voiceSelect.options[i].getAttribute('data-lang') == items.voiceType) {
+					voiceSelect.value = voiceSelect.options[i].value;
+					break;
+				}
+			}
 			emojisCheck.checked = items.emojisEnabled;
 			rateInput.value = items.voiceRate;
 			pitchInput.value = items.voicePitch;
@@ -75,8 +82,8 @@ document.addEventListener('DOMContentLoaded', function() {
 			} else {
 				option.textContent += ' (network)';
 			}
-			option.value = voices[i].lang;
-			option.setAttribute('data-name', voices[i].name);
+			option.value = voices[i].voiceURI;
+			option.setAttribute('data-lang', voices[i].lang);
 			voiceSelect.appendChild(option);
 		}
 		console.log('Options: loaded ' + voices.length + ' voices.');

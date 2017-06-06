@@ -32,12 +32,14 @@ loadOptions();
 var voices = [];
 function updateVoice() {
 	for(i = 0; i < voices.length; i++) {
-		if(voices[i].lang == options.voiceType) {
+		// .lang check is for legacy support
+		if(voices[i].voiceURI == options.voiceType || voices[i].lang == options.voiceType) {
 			options.voice = voices[i];
 			console.log('Using voice: ' + voices[i].name + ' (' + voices[i].lang + ')' + ' (local: ' + voices[i].localService + ')')
-			break;
+			return;
 		}
 	}
+	options.voice = voices[0];
 }
 
 chrome.storage.onChanged.addListener(function(changes, areaName) {
