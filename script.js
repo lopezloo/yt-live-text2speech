@@ -5,6 +5,7 @@ var options = {
 	voiceRate: 1.0,
 	voicePitch: 1.0,
 	voiceVolume: 1.0,
+	delay: 0.0
 }
 
 function loadOptions() {
@@ -15,13 +16,15 @@ function loadOptions() {
 		voiceRate: 1.0,
 		voicePitch: 1.0,
 		voiceVolume: 1.0,
+		delay: 0.0
 	}, function(items) {
 		options.voiceType = items.voiceType;
 		options.emojisEnabled = items.emojisEnabled;
 		options.voiceRate = items.voiceRate;
 		options.voicePitch = items.voicePitch;
 		options.voiceVolume = items.voiceVolume;
-		console.log('loadOptions: voice: ' + items.voiceType + ' emojis: ' + items.emojisEnabled + ' rate: ' + items.voiceRate + ' pitch: ' + items.voicePitch + ' volume: ' + items.voiceVolume);
+		options.delay = items.delay;
+		console.log('loadOptions: voice: ' + items.voiceType + ' emojis: ' + items.emojisEnabled + ' rate: ' + items.voiceRate + ' pitch: ' + items.voicePitch + ' volume: ' + items.voiceVolume + ' delay: ' + items.delay);
 	});
 }
 loadOptions();
@@ -43,7 +46,7 @@ chrome.storage.onChanged.addListener(function(changes, areaName) {
 			options[k] = changes[k].newValue;
 		}
 	}
-	console.log('Options changed. Voice: ' + options.voiceType + ' Emojis: ' + options.emojisEnabled + ' rate: ' + options.voiceRate + ' pitch: ' + options.voicePitch + ' volume: ' + options.voiceVolume);
+	console.log('Options changed. Voice: ' + options.voiceType + ' Emojis: ' + options.emojisEnabled + ' rate: ' + options.voiceRate + ' pitch: ' + options.voicePitch + ' volume: ' + options.voiceVolume + ' delay: ' + options.delay);
 	updateVoice();
 })
 
@@ -60,7 +63,12 @@ class ChatWatcher {
 	onSpeechEnd() {
 		delete this.queue[this.currentMsg];
 		this.currentMsg = null;
-		this.updateSpeech();
+		this.delaying = true;
+		let _this = this;
+		setTimeout(function() {
+			_this.delaying = false;
+			_this.updateSpeech();
+		}, options.delay*1000);
 	}
 
 	switchPause() {
@@ -69,7 +77,7 @@ class ChatWatcher {
 	}
 
 	updateSpeech() {
-		if(!this.paused && this.currentMsg === null && !this.detached) {
+		if(!this.paused && this.currentMsg === null && !this.detached && !this.delaying) {
 			if(voices.length == 0) {
 				console.log('ERROR: No voices loaded.')
 				return;

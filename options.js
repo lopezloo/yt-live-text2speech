@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', function() {
 	let rateInput = document.getElementById('rate');
 	let pitchInput = document.getElementById('pitch');
 	let volumeInput = document.getElementById('volume');
+	let delayInput = document.getElementById('delay');
 	let statusText = document.getElementById('status');
 
 	function saveChanges() {
@@ -12,6 +13,7 @@ document.addEventListener('DOMContentLoaded', function() {
 		let voiceRate = rateInput.value;
 		let voicePitch = pitchInput.value;
 		let voiceVolume = volumeInput.value;
+		let delay = delayInput.value;
 
 		chrome.storage.sync.set({
 			voiceType: voice,
@@ -19,9 +21,10 @@ document.addEventListener('DOMContentLoaded', function() {
 			voiceRate: voiceRate,
 			voicePitch: voicePitch,
 			voiceVolume: voiceVolume,
+			delay: delay
 		}, function() {
 			statusText.textContent = 'Options saved.';
-			console.log('Changes saved! Voice: ' + voice + '; emojis: ' + emojis + '; rate: ' + voiceRate + '; pitch: ' + voicePitch + '; volume: ' + voiceVolume);
+			console.log('Changes saved! Voice: ' + voice + '; emojis: ' + emojis + '; rate: ' + voiceRate + '; pitch: ' + voicePitch + '; volume: ' + voiceVolume + '; delay: ' + delay);
 		});
 	}
 
@@ -33,6 +36,7 @@ document.addEventListener('DOMContentLoaded', function() {
 			voiceRate: 1.0,
 			voicePitch: 1.0,
 			voiceVolume: 1.0,
+			delay: 0.0
 		}, function(items) {
 			console.log('Options loaded! Voice: ' + items.voiceType + '; emojis: ' + items.emojisEnabled + '; rate: ' + items.voiceRate + '; pitch: ' + items.voicePitch + '; volume: ' + items.voiceVolume);
 			voiceSelect.value = items.voiceType;
@@ -40,6 +44,7 @@ document.addEventListener('DOMContentLoaded', function() {
 			rateInput.value = items.voiceRate;
 			pitchInput.value = items.voicePitch;
 			volumeInput.value = items.voiceVolume;
+			delayInput.value = items.delay;
 		});
 	}
 
@@ -48,6 +53,7 @@ document.addEventListener('DOMContentLoaded', function() {
 	rateInput.addEventListener('change', saveChanges);
 	pitchInput.addEventListener('change', saveChanges);
 	volumeInput.addEventListener('change', saveChanges);
+	delayInput.addEventListener('change', saveChanges);
 
 	window.speechSynthesis.onvoiceschanged = function() {
 		let voices = speechSynthesis.getVoices();
