@@ -45,6 +45,13 @@ document.addEventListener('DOMContentLoaded', function() {
 			pitchInput.value = items.voicePitch;
 			volumeInput.value = items.voiceVolume;
 			delayInput.value = items.delay;
+
+			voiceSelect.disabled = false;
+			emojisCheck.disabled = false;
+			rateInput.disabled = false;
+			pitchInput.disabled = false;
+			volumeInput.disabled = false;
+			delayInput.disabled = false;
 		});
 	}
 
