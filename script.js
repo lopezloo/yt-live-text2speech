@@ -196,25 +196,18 @@ function initWatching() {
 	watcher = new ChatWatcher();
 
 	// without .iron-selected = detached chat
-	let targetNodes = $('#chat-messages.style-scope.yt-live-chat-renderer.iron-selected');
-	let MutationObserver = window.MutationObserver || window.WebKitMutationObserver;
-	let myObserver = new MutationObserver(mutationHandler);
-	let obsConfig = {
+	let observer = new MutationObserver(mutationHandler);
+	observer.observe($('#chat-messages.style-scope.yt-live-chat-renderer.iron-selected')[0], {
 		childList: true,
-		characterData: true,
+		characterData: false,
 		attributes: true,
 		subtree: true,
-		attributeOldValue: true
-	};
-
-	targetNodes.each(function() {
-		myObserver.observe(this, obsConfig);
+		attributeOldValue: true,
+		attributeFilter: ['is-deleted', 'id', 'class']
 	});
 
 	function mutationHandler(mutationRecords) {
 		mutationRecords.forEach(function(mutation) {
-			//console.log(mutation);
-
 			if(mutation.attributeName === 'is-deleted') {
 				// Message was deleted
 				watcher.removeMsg(mutation.target.id);
@@ -249,6 +242,7 @@ function initWatching() {
 		});
 	}
 
+	// Handle pause switch
 	var keypressed = false;
 	function onKeydown(e) {
 		if(!keypressed && e.which == 32) { // spacebar
@@ -276,7 +270,7 @@ function initWatching() {
 
 // Inject into YT interface to create our options inside the chat
 function initInterface() {
-	// Injects our menu option
+	// Inject our menu option
 	function updateMenu(menu) {
 		$(menu).find('ytd-menu-popup-renderer').css('max-height', '260px');
 		let $option = $('\
@@ -296,13 +290,8 @@ function initInterface() {
 				$(this).removeClass('iron-selected');
 			});
 
-			// Set our page visibility
-			let $page = $('iron-pages#content-pages > yt-live-chat-speech-options-renderer');
-			if($page.hasClass('iron-selected')) {
-				$page.removeClass('iron-selected');
-			} else {
-				$page.addClass('iron-selected');
-			}
+			// Set our page visible
+			$('iron-pages#content-pages > yt-live-chat-speech-options-renderer').addClass('iron-selected');
 
 			// Hide menu
 			$('iron-dropdown').css('display', 'none');
