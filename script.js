@@ -89,7 +89,7 @@ class ChatWatcher {
 				let id = Object.keys(this.queue)[0];
 				this.currentMsg = id;
 				let msg = this.queue[id];
-				let msgt = msg[0] + ': ' + msg[1];
+				let msgt = msg[0] + ': "' + msg[1] + '"';
 				console.log(msgt + ' (' + Object.keys(this.queue).length + ' in queue)');
 
 				let u = new SpeechSynthesisUtterance(msgt);
@@ -180,8 +180,8 @@ function getTextWithAlts(e) {
 	let txt = '';
 	e.contents().each(function() {
 		if($(this).get(0).nodeType == 1 && $(this).is('img')) {
-			// img (emoji)
-			txt += $(this).attr('alt');
+			// img (emoji), extra space is required to properly read more than 1 emoji in a row
+			txt += $(this).attr('alt') + ' ';
 		} else {
 			// text or span (mentions)
 			txt += $(this).text();
@@ -235,7 +235,10 @@ function initWatching() {
 						} else {
 							msg = $(this).find('#message').text();
 						}
-						watcher.addToQueue(id, author, msg);
+						// Check if there is any non-whitespace character
+						if (/\S/.test(msg)) {
+							watcher.addToQueue(id, author, msg);
+						}
 					}
 				});
 			}
