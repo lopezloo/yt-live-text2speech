@@ -161,14 +161,16 @@ class ChatWatcher {
 	}
 
 	onDetachedStateChanged(detached) {
-		this.detached = detached;
-		console.log('Chat detached: ' + this.detached);
-		if(this.detached) {
-			// Chat got detached to external window. We assume user want
-			// listen messages in that window, so clear current messages now.
-			// If he ever goes back, only new messages should play in that case.
-			for(let id in this.queue) {
-				this.removeMsg(id);
+		if(detached != this.detached) {
+			this.detached = detached;
+			console.log('Chat detached: ' + this.detached);
+			if(this.detached) {
+				// Chat got detached to external window. We assume user want
+				// listen messages in that window, so clear current messages now.
+				// If he ever goes back, only new messages should play in that case.
+				for(let id in this.queue) {
+					this.removeMsg(id);
+				}
 			}
 		}
 	}
@@ -225,7 +227,7 @@ function initWatching() {
 			}
 			else if(mutation.attributeName === 'class' && $(mutation.target).is('#chat-messages')) {
 				// Chat got detached/attached
-				let detached = !$(mutation.target).is('.iron-selected');
+				let detached = $('yt-live-chat-ninja-message-renderer').is('.iron-selected');
 				watcher.onDetachedStateChanged(detached);
 			}
 			else if (mutation.addedNodes !== null) {
@@ -272,9 +274,150 @@ function initWatching() {
 	$(parent.document).keyup(onKeyup);
 }
 
+// Inject into YT interface to create our options inside the chat
+function initInterface() {
+	// Injects our menu option
+	function updateMenu(menu) {
+		$(menu).find('ytd-menu-popup-renderer').css('max-height', '260px');
+		let $option = $('\
+<ytd-menu-service-item-renderer is="ytd-menu-service-item-renderer" role="option" tabindex="-1" aria-disabled="false" class="speech-option style-scope ytd-menu-popup-renderer x-scope ytd-menu-service-item-renderer-0">\
+	<template is="dom-if" class="style-scope ytd-menu-service-item-renderer"></template>\
+</ytd-menu-service-item-renderer>\
+		');
+		$(menu).find('paper-menu > div').append($option);
+
+		let $optionName = $('<yt-formatted-string class="style-scope ytd-menu-service-item-renderer x-scope yt-formatted-string-0"></yt-formatted-string>');
+		$option.append($optionName);
+		$optionName[0].innerHTML = 'Speech options';
+
+		$option.click(function() {
+			// Hide all content pages
+			$('iron-pages#content-pages').children().each(function() {
+				$(this).removeClass('iron-selected');
+			});
+
+			// Set our page visibility
+			let $page = $('iron-pages#content-pages > yt-live-chat-speech-options-renderer');
+			if($page.hasClass('iron-selected')) {
+				$page.removeClass('iron-selected');
+			} else {
+				$page.addClass('iron-selected');
+			}
+
+			// Hide menu
+			$('iron-dropdown').css('display', 'none');
+			$('iron-dropdown').attr('aria-hidden', 'true');
+		})
+	}
+
+	function addOptionMenu(menu) {
+		setTimeout(updateMenu, 1, menu);
+
+		// Create another observer to check if YT removes our option
+		// and create it again in that case
+		let observer = new MutationObserver(function(mutationRecords) {
+			mutationRecords.forEach(function(mutation) {
+				$(mutation.removedNodes).each(function() {
+					if($(this).hasClass('speech-option')) {
+						updateMenu(menu);
+						return false;
+					}
+				});
+			});
+		});
+		observer.observe($(menu).find('paper-menu > div')[0], {
+			childList: true,
+			attributes: false,
+			characterData: false,
+			subtree: false
+		});
+	}
+
+	if($('yt-live-chat-app > iron-dropdown').length > 0) {
+		addOptionMenu($('yt-live-chat-app > iron-dropdown'));
+	} else {
+		// Observe to detect when chat menu loads to inject our custom option
+		let chatMenuMutationObserver = new MutationObserver(chatMenuMutationHandler);
+		function chatMenuMutationHandler(mutationRecords) {
+			mutationRecords.forEach(function(mutation) {
+				$(mutation.addedNodes).each(function() {
+					if($(this).is('iron-dropdown')) {
+						// We got what we need, stop observing
+						chatMenuMutationObserver.disconnect();
+						addOptionMenu(this);
+					};
+				});
+			});
+		}
+		chatMenuMutationObserver.observe($('yt-live-chat-app')[0], {
+			childList: true,
+			attributes: false,
+			characterData: false,
+			subtree: false
+		});
+	}
+
+	// Inject our options page
+	function updatePages() {
+		let $optionPage = $('\
+<yt-live-chat-speech-options-renderer class="style-scope yt-live-chat-renderer x-scope yt-live-chat-participant-list-renderer-0">\
+	<div id="header" role="heading" class="style-scope yt-live-chat-participant-list-renderer">\
+		Speech options\
+	</div>\
+	<div id="participants" class="style-scope yt-live-chat-participant-list-renderer" style="overflow-y: initial;">\
+		<iframe src="' + chrome.extension.getURL('options.html') + '" style="width: 100%; height: 100%;">\
+	</div>\
+</yt-live-chat-speech-options-renderer>\
+		');
+		
+	  	let $icon = $('\
+<paper-icon-button id="back-button" icon="yt-icons:back" class="style-scope yt-live-chat-speech-options-renderer x-scope paper-icon-button-0" role="button" tabindex="0" aria-disabled="false">\
+	<iron-icon id="icon" class="style-scope paper-icon-button x-scope iron-icon-0">\
+		<svg viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" class="style-scope iron-icon" style="pointer-events: none; display: block; width: 100%; height: 100%;">\
+			<g class="style-scope iron-icon">\
+				<path class="style-scope iron-icon"></path>\
+			</g>\
+		</svg>\
+	</iron-icon>\
+</paper-icon-button>\
+		');
+
+	  	// Append page and icon
+		$('iron-pages#content-pages').append($optionPage);
+		$optionPage.find('#header').prepend($icon);
+
+		// Handle back icon
+		$icon.click(function() {
+			$('yt-live-chat-speech-options-renderer').removeClass('iron-selected');
+			$('#chat-messages').addClass('iron-selected');
+		});
+	}
+	updatePages();
+
+	// Observe to detect when YT removes our injected page
+	observer = new MutationObserver(function(mutationRecords) {
+		mutationRecords.forEach(function(mutation) {
+			$(mutation.removedNodes).each(function() {
+				if($(this).is('yt-live-chat-speech-options-renderer')) {
+					// Our page was removed, inject it again
+					updatePages();
+					return false;
+				}
+			});
+		});
+	});
+	observer.observe($('iron-pages#content-pages')[0], {
+		childList: true,
+		attributes: false,
+		characterData: false,
+		subtree: false
+	});
+}
+
 $(document).ready(function() {
 	console.log('yt-live-text2speech ready!');
 
+	initInterface();
 	speechSynthesis.onvoiceschanged = function() {
 		// For some reason, this event can fire multiple times.
 		if(voices.length == 0) {
