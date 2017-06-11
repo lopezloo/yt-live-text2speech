@@ -273,19 +273,39 @@ function initWatching() {
 
 // Inject into YT interface to create our options inside the chat
 function initInterface() {
+	let $chatApp = $('yt-live-chat-app');
+	if($chatApp.length == 0) {
+		// YTG embed in page version
+		$chatApp = $('#sidebar');
+	}
+
 	// Inject our menu option
 	function updateMenu(menu) {
-		$(menu).find('ytd-menu-popup-renderer').css('max-height', '260px');
+		let prefix = 'ytd';
+		let prefix2 = 'yt';
+		if(isYTGaming()) {
+			prefix = 'ytg';
+			prefix2 = 'ytg';
+		}
+
+		$(menu).find(prefix+'-menu-popup-renderer').css('max-height', '260px');
 		let $option = $('\
-<ytd-menu-service-item-renderer is="ytd-menu-service-item-renderer" role="option" tabindex="-1" aria-disabled="false" class="speech-option style-scope ytd-menu-popup-renderer x-scope ytd-menu-service-item-renderer-0">\
-	<template is="dom-if" class="style-scope ytd-menu-service-item-renderer"></template>\
-</ytd-menu-service-item-renderer>\
+<'+prefix+'-menu-service-item-renderer role="option" tabindex="-1" aria-disabled="false" class="speech-option style-scope '+prefix+'-menu-popup-renderer">\
+	<template is="dom-if" class="style-scope '+prefix+'-menu-service-item-renderer"></template>\
+</'+prefix+'-menu-service-item-renderer>\
 		');
 		$(menu).find('paper-menu > div').append($option);
 
-		let $optionName = $('<yt-formatted-string class="style-scope ytd-menu-service-item-renderer x-scope yt-formatted-string-0"></yt-formatted-string>');
+		let $optionName = $('<'+prefix2+'-formatted-string class="style-scope '+prefix+'-menu-service-item-renderer x-scope '+prefix2+'-formatted-string-0"></'+prefix2+'-formatted-string>');
 		$option.append($optionName);
 		$optionName[0].innerHTML = 'Speech options';
+
+		if(isYTGaming()) {
+			// Some YTG artifact
+			setTimeout(function() {
+				$('ytg-menu-service-item-renderer > yt-icon').remove();
+			}, 1);
+		}
 
 		$option.click(function() {
 			// Hide all content pages
@@ -303,8 +323,6 @@ function initInterface() {
 	}
 
 	function addOptionMenu(menu) {
-		setTimeout(updateMenu, 1, menu);
-
 		// Create another observer to check if YT removes our option
 		// and create it again in that case
 		let observer = new MutationObserver(function(mutationRecords) {
@@ -323,10 +341,12 @@ function initInterface() {
 			characterData: false,
 			subtree: false
 		});
+
+		setTimeout(updateMenu, 1, menu);
 	}
 
-	if($('yt-live-chat-app > iron-dropdown').length > 0) {
-		addOptionMenu($('yt-live-chat-app > iron-dropdown'));
+	if($chatApp.find('iron-dropdown:not(#dropdown)').length > 0) {
+		addOptionMenu($chatApp.find('iron-dropdown'));
 	} else {
 		// Observe to detect when chat menu loads to inject our custom option
 		let chatMenuMutationObserver = new MutationObserver(chatMenuMutationHandler);
@@ -341,7 +361,13 @@ function initInterface() {
 				});
 			});
 		}
-		chatMenuMutationObserver.observe($('yt-live-chat-app')[0], {
+
+		let target = $chatApp[0];
+		if($('ytg-overlay-layer').length > 0) {
+			// YTG embeded version
+			target = $('ytg-overlay-layer')[0];
+		}
+		chatMenuMutationObserver.observe(target, {
 			childList: true,
 			attributes: false,
 			characterData: false,
@@ -351,13 +377,17 @@ function initInterface() {
 
 	// Inject our options page
 	function updatePages() {
+		let optionsURL = chrome.extension.getURL('options.html');
+		if(isDarkMode()) {
+			optionsURL += '?dark';
+		}
 		let $optionPage = $('\
 <yt-live-chat-speech-options-renderer class="style-scope yt-live-chat-renderer x-scope yt-live-chat-participant-list-renderer-0">\
 	<div id="header" role="heading" class="style-scope yt-live-chat-participant-list-renderer">\
 		Speech options\
 	</div>\
 	<div id="participants" class="style-scope yt-live-chat-participant-list-renderer" style="overflow-y: initial;">\
-		<iframe src="' + chrome.extension.getURL('options.html') + '" style="width: 100%; height: 100%;">\
+		<iframe src="' + optionsURL + '" scrolling="no" style="width: 100%; height: 100%;">\
 	</div>\
 </yt-live-chat-speech-options-renderer>\
 		');
@@ -404,6 +434,14 @@ function initInterface() {
 		characterData: false,
 		subtree: false
 	});
+}
+
+function isYTGaming() {
+	return window.location.href.indexOf('https://gaming.youtube') == 0;
+}
+
+function isDarkMode() {
+	return isYTGaming() || document.body.getAttribute('dark') == 'true';
 }
 
 $(document).ready(function() {

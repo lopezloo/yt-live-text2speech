@@ -89,4 +89,8 @@ document.addEventListener('DOMContentLoaded', function() {
 		console.log('Options: loaded ' + voices.length + ' voices.');
 		loadOptions();
 	};
+
+	if(window.location.href.endsWith('?dark')) {
+		document.body.style.color = 'white';
+	}
 });

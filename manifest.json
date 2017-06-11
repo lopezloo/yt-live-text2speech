@@ -15,8 +15,15 @@
   ],
   "content_scripts": [
     {
-      "matches": ["https://www.youtube.com/live_chat?*"],
-      "js": ["jquery-3.2.0.min.js", "script.js"],
+      "matches": [
+        "https://www.youtube.com/live_chat?*",
+        "https://gaming.youtube.com/live_chat?*",
+        "https://gaming.youtube.com/watch?v=*"
+      ],
+      "js": [
+        "jquery-3.2.0.min.js",
+        "script.js"
+      ],
       "all_frames": true
     }
   ],
