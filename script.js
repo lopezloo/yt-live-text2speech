@@ -1,3 +1,12 @@
+function fixStorage() {
+	if(navigator.userAgent.search('Chrome') == -1) {
+		// Seems like storage.sync doesn't work on Firefox.
+		chrome.storage.sync = chrome.storage.local;
+		console.log('WARNING: Using local storage.');
+	}
+}
+fixStorage();
+
 var options = {
 	voiceType: '',
 	voice: null,
@@ -193,6 +202,8 @@ function getTextWithAlts(e) {
 var watcher = null;
 function initWatching() {
 	console.log('yt-live-text2speech: initializing...')
+
+	initInterface();
 	watcher = new ChatWatcher();
 
 	// without .iron-selected = detached chat
@@ -296,9 +307,13 @@ function initInterface() {
 		');
 		$(menu).find('paper-menu > div').append($option);
 
-		let $optionName = $('<'+prefix2+'-formatted-string class="style-scope '+prefix+'-menu-service-item-renderer x-scope '+prefix2+'-formatted-string-0"></'+prefix2+'-formatted-string>');
-		$option.append($optionName);
-		$optionName[0].innerHTML = 'Speech options';
+		setTimeout(function() {
+			let $optionName = $('<'+prefix2+'-formatted-string class="style-scope '+prefix+'-menu-service-item-renderer x-scope '+prefix2+'-formatted-string-0"></'+prefix2+'-formatted-string>');
+			$option.append($optionName);
+			setTimeout(function() {
+				$optionName[0].innerHTML = 'Speech options';
+			}, 1);
+		}, 1);
 
 		if(isYTGaming()) {
 			// Some YTG artifact
@@ -444,27 +459,33 @@ function isDarkMode() {
 	return isYTGaming() || document.body.getAttribute('dark') == 'true';
 }
 
+function loadVoices() {
+	if(voices.length == 0) {
+		voices = speechSynthesis.getVoices();
+		console.log('Loaded ' + voices.length + ' voices.');
+		updateVoice();
+
+		if(watcher === null) {
+			// Init chat after 2s (simple way to prevent reading old messages)
+			setTimeout(initWatching, 2000);
+		}
+	}
+}
+
 $(document).ready(function() {
 	console.log('yt-live-text2speech ready!');
+	if(speechSynthesis.getVoices().length > 0) {
+		loadVoices();
+	}
 
-	initInterface();
 	speechSynthesis.onvoiceschanged = function() {
-		// For some reason, this event can fire multiple times.
-		if(voices.length == 0) {
-			voices = speechSynthesis.getVoices();
-			console.log('Loaded ' + voices.length + ' voices.');
-			updateVoice();
-
-			if(watcher === null) {
-				// Init chat after 2s (simple way to prevent reading old messages)
-				setTimeout(initWatching, 2000);
-			}
-		}
+		// For some reason, this event can fire multiple times (Chromium).
+		loadVoices();
 	};
 });
 
 window.onbeforeunload = function() {
-	// Browser won't stop speaking after closing tab.
+	// Chromium won't stop speaking after closing tab.
 	// So shut up, pls.
 	speechSynthesis.cancel();
 };

@@ -1,3 +1,12 @@
+function fixStorage() {
+	if(navigator.userAgent.search('Chrome') == -1) {
+		// Seems like storage.sync doesn't work on Firefox.
+		chrome.storage.sync = chrome.storage.local;
+		console.log('WARNING: Using local storage.');
+	}
+}
+fixStorage();
+
 document.addEventListener('DOMContentLoaded', function() {
 	let voiceSelect = document.getElementById('voice');
 	let emojisCheck = document.getElementById('emojis');
@@ -40,7 +49,7 @@ document.addEventListener('DOMContentLoaded', function() {
 		}, function(items) {
 			console.log('Options loaded! Voice: ' + items.voiceType + '; emojis: ' + items.emojisEnabled + '; rate: ' + items.voiceRate + '; pitch: ' + items.voicePitch + '; volume: ' + items.voiceVolume);
 			
-			voiceSelect.value = voiceSelect.options[0];
+			voiceSelect.value = voiceSelect.options[0].value;
 			for(let i=0; i < voiceSelect.options.length; i++) {
 				if(voiceSelect.options[i].value == items.voiceType || voiceSelect.options[i].getAttribute('data-lang') == items.voiceType) {
 					voiceSelect.value = voiceSelect.options[i].value;
@@ -69,7 +78,7 @@ document.addEventListener('DOMContentLoaded', function() {
 	volumeInput.addEventListener('change', saveChanges);
 	delayInput.addEventListener('change', saveChanges);
 
-	window.speechSynthesis.onvoiceschanged = function() {
+	function loadVoices() {
 		let voices = speechSynthesis.getVoices();
 		for(i = 0; i < voices.length; i++) {
 			let option = document.createElement('option');
@@ -88,6 +97,14 @@ document.addEventListener('DOMContentLoaded', function() {
 		}
 		console.log('Options: loaded ' + voices.length + ' voices.');
 		loadOptions();
+	}
+
+	if(speechSynthesis.getVoices().length > 0) {
+		loadVoices();
+	}
+
+	window.speechSynthesis.onvoiceschanged = function() {
+		loadVoices();
 	};
 
 	if(window.location.href.endsWith('?dark')) {
