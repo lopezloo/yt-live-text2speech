@@ -1,11 +1,12 @@
 {
   "manifest_version": 2,
-
-  "name": "YouTube live chat text2speech",
-  "description": "This extension reads every message on YouTube live chat.",
-  "version": "0.8.1.0",
-  "author": "lopezloo",
-  "homepage_url": "https://github.com/lopezloo/yt-live-text2speech",
+  "icons": { "16": "icon16.png",
+           "48": "icon48.png",
+          "128": "icon128.png" },
+  "name": "YouTube studio livestreaming chat TTS",
+  "description": "This extension reads every message on YouTube live chat when you livestreaming.",
+  "version": "0.0.0.1",
+  "author": "ileowin",
 
   "browser_action": {
     "default_popup": "options.html"
@@ -16,9 +17,7 @@
   "content_scripts": [
     {
       "matches": [
-        "https://www.youtube.com/live_chat?*",
-        "https://gaming.youtube.com/live_chat?*",
-        "https://gaming.youtube.com/watch?v=*"
+        "https://studio.youtube.com/video/*/livestreaming*"
       ],
       "js": [
         "jquery-3.2.0.min.js",
