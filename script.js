@@ -203,7 +203,7 @@ var watcher = null;
 function initWatching() {
 	console.log('yt-live-text2speech: initializing...')
 
-	initInterface();
+
 	watcher = new ChatWatcher();
 
 	// without .iron-selected = detached chat
@@ -222,7 +222,7 @@ function initWatching() {
 			if(mutation.attributeName === 'is-deleted') {
 				// Message was deleted
 				watcher.removeMsg(mutation.target.id);
-			} 
+			}
 			else if(mutation.attributeName === 'id') {
 				if(mutation.oldValue !== null) {
 					// YT gives temporary ID for own messages, which needs to be updated
@@ -259,9 +259,9 @@ function initWatching() {
 	// Handle pause switch
 	var keypressed = false;
 	function onKeydown(e) {
+		$activeElement = $(parent.document.activeElement);
 		if(!keypressed && e.which == 32) { // spacebar
 			keypressed = true;
-			$activeElement = $(parent.document.activeElement);
 			if($('yt-live-chat-text-input-field-renderer').attr('focused') !== '' &&
 				!$activeElement.is('input') &&
 				!$activeElement.is('textarea')
@@ -270,194 +270,86 @@ function initWatching() {
 				e.preventDefault();
 			}
 		}
+		if( e.which == 27 )
+			if($('yt-live-chat-text-input-field-renderer').attr('focused') !== '' &&
+				!$activeElement.is('input') &&
+				!$activeElement.is('textarea')
+			){
+				speechSynthesis.cancel();
+				watcher.queue = {};
+			}
+
 	}
 	function onKeyup(e) {
 		if(keypressed && e.which == 32) {
 			keypressed = false;
 		}
 	}
+	function stopSpeech(){
+
+				speechSynthesis.resume();
+				watcher.paused = false;
+				watcher.updateSpeech();
+			}
+			// called when we detect sound
+			function startSpeech(){
+					try{
+						speechSynthesis.pause();
+						this.paused = true;
+						this.updateSpeech();
+
+				}
+				catch(e){}
+			}
+			// request a LocalMediaStream
+			navigator.mediaDevices.getUserMedia({audio:true})
+			// add our listeners
+			.then(stream => detectSilence(stream, stopSpeech, startSpeech))
+			.catch(e => console.log(e.message));
+
+
+			function detectSilence(
+				stream,
+				onSoundEnd = _=>{},
+				onSoundStart = _=>{},
+				silence_delay = 500,
+				min_decibels = -60
+				) {
+				const ctx = new AudioContext();
+				const analyser = ctx.createAnalyser();
+				const streamNode = ctx.createMediaStreamSource(stream);
+				streamNode.connect(analyser);
+				analyser.minDecibels = min_decibels;
+
+				const data = new Uint8Array(analyser.frequencyBinCount); // will hold our data
+				let silence_start = performance.now();
+				let triggered = false; // trigger only once per silence event
+
+				function loop(time) {
+					requestAnimationFrame(loop); // we'll loop every 60th of a second to check
+					analyser.getByteFrequencyData(data); // get current data
+					if (data.some(v => v)) { // if there is data above the given db limit
+						if(triggered){
+							triggered = false;
+							onSoundStart();
+							}
+						silence_start = time; // set it to now
+					}
+					if (!triggered && time - silence_start > silence_delay) {
+						onSoundEnd();
+						triggered = true;
+					}
+				}
+				loop();
+			}
+
 	$(document).keydown(onKeydown);
 	$(parent.document).keydown(onKeydown);
 	$(document).keyup(onKeyup);
 	$(parent.document).keyup(onKeyup);
 }
 
-// Inject into YT interface to create our options inside the chat
-function initInterface() {
-	let $chatApp = $('yt-live-chat-app');
-	if($chatApp.length == 0) {
-		// YTG embed in page version
-		$chatApp = $('#sidebar');
-	}
 
-	// Inject our menu option
-	function updateMenu(menu) {
-		let prefix = 'ytd';
-		let prefix2 = 'yt';
-		if(isYTGaming()) {
-			prefix = 'ytg';
-			prefix2 = 'ytg';
-		}
-
-		$(menu).find(prefix+'-menu-popup-renderer').css('max-height', '260px');
-		let $option = $('\
-<'+prefix+'-menu-service-item-renderer role="option" tabindex="-1" aria-disabled="false" class="speech-option style-scope '+prefix+'-menu-popup-renderer">\
-	<template is="dom-if" class="style-scope '+prefix+'-menu-service-item-renderer"></template>\
-</'+prefix+'-menu-service-item-renderer>\
-		');
-		$(menu).find('paper-menu > div').append($option);
-
-		setTimeout(function() {
-			let $optionName = $('<'+prefix2+'-formatted-string class="style-scope '+prefix+'-menu-service-item-renderer x-scope '+prefix2+'-formatted-string-0"></'+prefix2+'-formatted-string>');
-			$option.append($optionName);
-			setTimeout(function() {
-				$optionName[0].innerHTML = 'Speech options';
-			}, 1);
-		}, 1);
-
-		if(isYTGaming()) {
-			// Some YTG artifact
-			setTimeout(function() {
-				$('ytg-menu-service-item-renderer > yt-icon').remove();
-			}, 1);
-		}
-
-		$option.click(function() {
-			// Hide all content pages
-			$('iron-pages#content-pages').children().each(function() {
-				$(this).removeClass('iron-selected');
-			});
-
-			// Set our page visible
-			$('iron-pages#content-pages > yt-live-chat-speech-options-renderer').addClass('iron-selected');
-
-			// Hide menu
-			$('iron-dropdown').css('display', 'none');
-			$('iron-dropdown').attr('aria-hidden', 'true');
-		})
-	}
-
-	function addOptionMenu(menu) {
-		// Create another observer to check if YT removes our option
-		// and create it again in that case
-		let observer = new MutationObserver(function(mutationRecords) {
-			mutationRecords.forEach(function(mutation) {
-				$(mutation.removedNodes).each(function() {
-					if($(this).hasClass('speech-option')) {
-						updateMenu(menu);
-						return false;
-					}
-				});
-			});
-		});
-		observer.observe($(menu).find('paper-menu > div')[0], {
-			childList: true,
-			attributes: false,
-			characterData: false,
-			subtree: false
-		});
-
-		setTimeout(updateMenu, 1, menu);
-	}
-
-	if($chatApp.find('iron-dropdown:not(#dropdown)').length > 0) {
-		addOptionMenu($chatApp.find('iron-dropdown'));
-	} else {
-		// Observe to detect when chat menu loads to inject our custom option
-		let chatMenuMutationObserver = new MutationObserver(chatMenuMutationHandler);
-		function chatMenuMutationHandler(mutationRecords) {
-			mutationRecords.forEach(function(mutation) {
-				$(mutation.addedNodes).each(function() {
-					if($(this).is('iron-dropdown')) {
-						// We got what we need, stop observing
-						chatMenuMutationObserver.disconnect();
-						addOptionMenu(this);
-					};
-				});
-			});
-		}
-
-		let target = $chatApp[0];
-		if($('ytg-overlay-layer').length > 0) {
-			// YTG embeded version
-			target = $('ytg-overlay-layer')[0];
-		}
-		chatMenuMutationObserver.observe(target, {
-			childList: true,
-			attributes: false,
-			characterData: false,
-			subtree: false
-		});
-	}
-
-	// Inject our options page
-	function updatePages() {
-		let optionsURL = chrome.extension.getURL('options.html');
-		if(isDarkMode()) {
-			optionsURL += '?dark';
-		}
-		let $optionPage = $('\
-<yt-live-chat-speech-options-renderer class="style-scope yt-live-chat-renderer x-scope yt-live-chat-participant-list-renderer-0">\
-	<div id="header" role="heading" class="style-scope yt-live-chat-participant-list-renderer">\
-		Speech options\
-	</div>\
-	<div id="participants" class="style-scope yt-live-chat-participant-list-renderer" style="overflow-y: initial;">\
-		<iframe src="' + optionsURL + '" scrolling="no" style="width: 100%; height: 100%;">\
-	</div>\
-</yt-live-chat-speech-options-renderer>\
-		');
-		
-	  	let $icon = $('\
-<paper-icon-button id="back-button" icon="yt-icons:back" class="style-scope yt-live-chat-speech-options-renderer x-scope paper-icon-button-0" role="button" tabindex="0" aria-disabled="false">\
-	<iron-icon id="icon" class="style-scope paper-icon-button x-scope iron-icon-0">\
-		<svg viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" class="style-scope iron-icon" style="pointer-events: none; display: block; width: 100%; height: 100%;">\
-			<g class="style-scope iron-icon">\
-				<path class="style-scope iron-icon"></path>\
-			</g>\
-		</svg>\
-	</iron-icon>\
-</paper-icon-button>\
-		');
-
-	  	// Append page and icon
-		$('iron-pages#content-pages').append($optionPage);
-		$optionPage.find('#header').prepend($icon);
-
-		// Handle back icon
-		$icon.click(function() {
-			$('yt-live-chat-speech-options-renderer').removeClass('iron-selected');
-			$('#chat-messages').addClass('iron-selected');
-		});
-	}
-	updatePages();
-
-	// Observe to detect when YT removes our injected page
-	observer = new MutationObserver(function(mutationRecords) {
-		mutationRecords.forEach(function(mutation) {
-			$(mutation.removedNodes).each(function() {
-				if($(this).is('yt-live-chat-speech-options-renderer')) {
-					// Our page was removed, inject it again
-					updatePages();
-					return false;
-				}
-			});
-		});
-	});
-	observer.observe($('iron-pages#content-pages')[0], {
-		childList: true,
-		attributes: false,
-		characterData: false,
-		subtree: false
-	});
-}
-
-function isYTGaming() {
-	return window.location.href.indexOf('https://gaming.youtube') == 0;
-}
-
-function isDarkMode() {
-	return isYTGaming() || document.body.getAttribute('dark') == 'true';
-}
 
 function loadVoices() {
 	if(voices.length == 0) {
@@ -467,7 +359,7 @@ function loadVoices() {
 
 		if(watcher === null) {
 			// Init chat after 2s (simple way to prevent reading old messages)
-			setTimeout(initWatching, 2000);
+				setTimeout(initWatching, 2000);
 		}
 	}
 }
