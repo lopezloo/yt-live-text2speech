@@ -392,7 +392,7 @@ let mainObserver = new MutationObserver(function(mutationRecords){
 	});
 
 });
-mainObserver.observe($("#page.style-scope.ytls-core-app")[0], {
+mainObserver.observe(document.body, {
 	childList: true,
 	characterData: false,
 	attributes: true,
@@ -403,7 +403,7 @@ mainObserver.observe($("#page.style-scope.ytls-core-app")[0], {
 
 $(document).ready(function() {
 
-	document.querySelector('button').click();
+
 
 
 	if(speechSynthesis.getVoices().length > 0) {
