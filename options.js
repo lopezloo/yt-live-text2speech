@@ -15,6 +15,33 @@ document.addEventListener('DOMContentLoaded', function() {
 	let volumeInput = document.getElementById('volume');
 	let delayInput = document.getElementById('delay');
 	let statusText = document.getElementById('status');
+	let startButton = document.getElementById('start');
+	let pauseButton = document.getElementById('pause');
+	let clearButton = document.getElementById('clear');
+
+	startButton.onclick = function(){
+
+		 chrome.tabs.query({currentWindow: true, active:true},
+			 tab => chrome.tabs.sendMessage(tab[0].id,"start")
+		 );
+
+	}
+
+	pauseButton.onclick = function(){
+
+		 chrome.tabs.query({currentWindow: true, active:true},
+			 tab => chrome.tabs.sendMessage(tab[0].id,"pause")
+		 );
+
+	}
+
+	clearButton.onclick = function(){
+
+		 chrome.tabs.query({currentWindow: true, active:true},
+			 tab => chrome.tabs.sendMessage(tab[0].id,"clear")
+		 );
+
+	}
 
 	function saveChanges() {
 		let voice = voiceSelect.options[voiceSelect.selectedIndex].value;
@@ -48,7 +75,7 @@ document.addEventListener('DOMContentLoaded', function() {
 			delay: 0.0
 		}, function(items) {
 			console.log('Options loaded! Voice: ' + items.voiceType + '; emojis: ' + items.emojisEnabled + '; rate: ' + items.voiceRate + '; pitch: ' + items.voicePitch + '; volume: ' + items.voiceVolume);
-			
+
 			voiceSelect.value = voiceSelect.options[0].value;
 			for(let i=0; i < voiceSelect.options.length; i++) {
 				if(voiceSelect.options[i].value == items.voiceType || voiceSelect.options[i].getAttribute('data-lang') == items.voiceType) {
@@ -84,7 +111,7 @@ document.addEventListener('DOMContentLoaded', function() {
 			let option = document.createElement('option');
 			option.textContent = voices[i].name;
 			if(voices[i].lang !== '') {
-				option.textContent += ' (' + voices[i].lang + ')';	
+				option.textContent += ' (' + voices[i].lang + ')';
 			}
 			if(voices[i].localService) {
 				option.textContent += ' (local)';

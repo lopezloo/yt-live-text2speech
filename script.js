@@ -61,6 +61,20 @@ chrome.storage.onChanged.addListener(function(changes, areaName) {
 	updateVoice();
 })
 
+chrome.runtime.onMessage.addListener( function(cmd){
+
+	if(cmd == "start" && watcher === null)
+		initWatching();
+	if(cmd == "clear"){
+		speechSynthesis.cancel();
+		watcher.queue = {};
+	};
+	if(cmd == "pause"){
+		watcher.switchPause();
+	};
+
+});
+
 class ChatWatcher {
 	constructor() {
 		this.queue = {};
@@ -199,16 +213,21 @@ function getTextWithAlts(e) {
 	return txt;
 }
 
+
+
+
+
 var watcher = null;
 function initWatching() {
-	console.log('yt-live-text2speech: initializing...')
-
+	let targetWatcher = $('#chat-messages.style-scope.yt-live-chat-renderer.iron-selected');
+	if(targetWatcher.length == 0)
+		return console.error('no chat elemnt')
 
 	watcher = new ChatWatcher();
 
 	// without .iron-selected = detached chat
 	let observer = new MutationObserver(mutationHandler);
-	observer.observe($('#chat-messages.style-scope.yt-live-chat-renderer.iron-selected')[0], {
+	observer.observe(targetWatcher[0], {
 		childList: true,
 		characterData: false,
 		attributes: true,
@@ -357,15 +376,36 @@ function loadVoices() {
 		console.log('Loaded ' + voices.length + ' voices.');
 		updateVoice();
 
-		if(watcher === null) {
-			// Init chat after 2s (simple way to prevent reading old messages)
-				setTimeout(initWatching, 2000);
-		}
+
 	}
 }
 
+let mainObserver = new MutationObserver(function(mutationRecords){
+	mutationRecords.forEach(function(mutation) {
+		if (mutation.addedNodes !== null)
+		$(mutation.addedNodes).each(function() {
+			if ($(this).is('#chat-messages.style-scope.yt-live-chat-renderer.iron-selected') &&  watcher === null) {
+					initWatching();
+					mainObserver.disconnect()
+			}
+		})
+	});
+
+});
+mainObserver.observe($("#page.style-scope.ytls-core-app")[0], {
+	childList: true,
+	characterData: false,
+	attributes: true,
+	subtree: true,
+	attributeOldValue: true,
+	attributeFilter: ['is-deleted', 'id', 'class']
+});
+
 $(document).ready(function() {
-	console.log('yt-live-text2speech ready!');
+
+	document.querySelector('button').click();
+
+
 	if(speechSynthesis.getVoices().length > 0) {
 		loadVoices();
 	}
