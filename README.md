@@ -1,5 +1,5 @@
-# YouTube live chat text2speech
-Browser extension which reads every message on YouTube live chat.
+# YouTube Live Chat Text to Speech
+Browser extension which reads every message from YouTube live chat.
 
 # Features
 * configurable and easy to use
@@ -9,7 +9,7 @@ Browser extension which reads every message on YouTube live chat.
 * reading emojis
 
 # Support
-Currently it support Google Chrome.
+Chromium based browsers & Firefox.
 
 # Download
 * [Chrome Web Store](https://chrome.google.com/webstore/detail/youtube-live-chat-text2sp/npmdjndmifhlpbemfpdpbjcagamcohee)
