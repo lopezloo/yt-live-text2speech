@@ -11,8 +11,8 @@ Browser extension which reads every message from YouTube live chat.
 ## Support
 Chromium based browsers & Firefox.
 
-## Development
-Pull requests are welcome. New features should be reported as issue first.
-
 ## Download
 * [Chrome Web Store](https://chrome.google.com/webstore/detail/youtube-live-chat-text2sp/npmdjndmifhlpbemfpdpbjcagamcohee)
+
+## Development
+Pull requests are welcome. New features should be reported as issue first.
